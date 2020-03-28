@@ -140,10 +140,14 @@ namespace {
           if(flag==0){
             flag=1;
             IRBuilder<> builder(&BB);
-            FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context)}, false);
+            FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context), Type::getInt8PtrTy(context)}, false);
             auto callee = BB.getModule()->getOrInsertFunction("enter_func", type);
+
             GlobalVariable* name= builder.CreateGlobalString(F.getName());
-            CallInst::Create(callee, {name}, "",&Inst);
+            GlobalVariable* file= builder.CreateGlobalString(F.getParent()->getSourceFileName());
+
+            CallInst::Create(callee, {name,file}, "",&Inst);
+
 
             if(vec.size()==0){
                 Type* it = IntegerType::getInt8Ty(context);
@@ -162,16 +166,8 @@ namespace {
           if(isInterestingMemoryAccess(&Inst,&IsWrite,&TypeSize,&Alignment)){
             IRBuilder<> builder(&BB);
 
-            FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt64Ty(context),Type::getInt8PtrTy(context),Type::getInt8PtrTy(context),Type::getInt64Ty(context)}, false);
+            FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt64Ty(context)}, false);
             auto callee = BB.getModule()->getOrInsertFunction("report_xasan", type);
-
-            const DebugLoc &debugInfo =Inst.getDebugLoc();
-
-            string directory = debugInfo.get()->getDirectory();
-            string filepath = debugInfo.get()->getFilename();
-
-            Value *pdir = builder.CreateGlobalStringPtr(directory);
-            Value *ppath = builder.CreateGlobalStringPtr(filepath);
 
 
             ConstantInt *size = builder.getInt64(TypeSize/8);
@@ -181,9 +177,9 @@ namespace {
             Value* addr=IsWrite?Inst.getOperand(1):Inst.getOperand(0);
 
             if(IsWrite)
-                CallInst::Create(callee, {addr,size,iswrite,pdir,ppath}, "",&Inst);
+                CallInst::Create(callee, {addr,size,iswrite}, "",&Inst);
             else
-                CallInst::Create(callee, {addr,size,isread,pdir,ppath}, "",&Inst);
+                CallInst::Create(callee, {addr,size,isread}, "",&Inst);
               }
 
               if(!Inst.getMetadata("isRedZone")){

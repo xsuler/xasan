@@ -12,7 +12,8 @@ char c;
 char d;
 
 
-void enter_func(char* name){
+void enter_func(char* name, char* file){
+    printf("enter: %s\n",file);
 
 }
  
@@ -29,8 +30,7 @@ void mark_invalid(char* addr, int64_t size, char type){
 }
 
 
-void report_xasan(int64_t* addr, int64_t size, int64_t type, char* dir, char* path, int64_t line){
-    printf("%s %s %ld",dir,path,line);
+void report_xasan(int64_t* addr, int64_t size, int64_t type){
 }
 
 
