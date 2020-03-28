@@ -194,11 +194,12 @@ namespace {
             Value *rzv=IRB.CreateIntToPtr(
             IRB.CreateAdd(vec[0],offset),Type::getInt8PtrTy(context));
             
-            FunctionType *type_rz = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context)}, false);
+            FunctionType *type_rz = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt8Ty(context)}, false);
             auto callee_rz = BB.getModule()->getOrInsertFunction("mark_invalid", type_rz);
             ConstantInt *size_rz = builder.getInt64(16);
+            ConstantInt *et_rz = builder.getInt8(2);
 
-            CallInst* ci_rz=CallInst::Create(callee_rz, {rzv,size_rz}, "",RI);
+            CallInst* ci_rz=CallInst::Create(callee_rz, {rzv,size_rz,et_rz}, "",RI);
 
             allocs.push_back(rzv);
             sizes.push_back(16);
@@ -257,11 +258,12 @@ namespace {
                 ConstantInt *offset_rz =IRB.getInt64(cur_pos);
                 Value *rzv=IRB.CreateIntToPtr(
                    IRB.CreateAdd(vec[0],offset_rz),Type::getInt8PtrTy(context));
-                FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context)}, false);
+                FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt8Ty(context)}, false);
                 auto callee = BB.getModule()->getOrInsertFunction("mark_invalid", type);
                 ConstantInt *size = builder.getInt64(16-(sz%16));
+                ConstantInt *et_rz= builder.getInt8(2);
 
-                CallInst::Create(callee, {rzv,size}, "",&Inst);
+                CallInst::Create(callee, {rzv,size,et_rz}, "",&Inst);
 
                 allocs.push_back(rzv);
                 sizes.push_back(16-(sz%16));

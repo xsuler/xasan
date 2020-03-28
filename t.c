@@ -24,8 +24,8 @@ void leave_func(){
 void mark_valid(char* addr, int64_t size){
  printf("addr: %p, size: %ld\n",addr,size);
 }
-void mark_invalid(char* addr, int64_t size){
- printf("inv addr: %p, size: %ld\n",addr,size);
+void mark_invalid(char* addr, int64_t size, char type){
+ printf("inv addr: %p, size: %ld, type: %d\n",addr,size,(int)type);
 }
 
 
@@ -47,6 +47,7 @@ void func(){
 }
 
 int main(){
+  func();
   printf("%p %p %p %p\n",&a,&b,&c,&d);
   return 0;
 }
