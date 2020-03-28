@@ -202,7 +202,7 @@ namespace {
             FunctionType *type_rz = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt8Ty(context)}, false);
             auto callee_rz = BB.getModule()->getOrInsertFunction("mark_invalid", type_rz);
             ConstantInt *size_rz = builder.getInt64(16);
-            ConstantInt *et_rz = builder.getInt8(2);
+            ConstantInt *et_rz = builder.getInt8(122);
 
             CallInst* ci_rz=CallInst::Create(callee_rz, {rzv,size_rz,et_rz}, "",RI);
 
@@ -266,7 +266,7 @@ namespace {
                 FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt8Ty(context)}, false);
                 auto callee = BB.getModule()->getOrInsertFunction("mark_invalid", type);
                 ConstantInt *size = builder.getInt64(16-(sz%16));
-                ConstantInt *et_rz= builder.getInt8(2);
+                ConstantInt *et_rz= builder.getInt8(122);
 
                 CallInst::Create(callee, {rzv,size,et_rz}, "",&Inst);
 
