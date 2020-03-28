@@ -160,27 +160,36 @@ namespace {
           uint64_t TypeSize;
           unsigned Alignment;
           if(isInterestingMemoryAccess(&Inst,&IsWrite,&TypeSize,&Alignment)){
+            IRBuilder<> builder(&BB);
 
-            FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt64Ty(context)}, false);
+            FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt64Ty(context),Type::getInt8PtrTy(context),Type::getInt8PtrTy(context),Type::getInt64Ty(context)}, false);
             auto callee = BB.getModule()->getOrInsertFunction("report_xasan", type);
-	    IRBuilder<> builder(&BB);
 
-	    ConstantInt *size = builder.getInt64(TypeSize/8);
-	    ConstantInt *iswrite = builder.getInt64(1);
-	    ConstantInt *isread = builder.getInt64(0);
+            const DebugLoc &debugInfo =Inst.getDebugLoc();
 
-        Value* addr=IsWrite?Inst.getOperand(1):Inst.getOperand(0);
+            string directory = debugInfo.get()->getDirectory();
+            string filepath = debugInfo.get()->getFilename();
 
-	    if(IsWrite)
-		    CallInst::Create(callee, {addr,size,iswrite}, "",&Inst);
-	    else
-		    CallInst::Create(callee, {addr,size,isread}, "",&Inst);
-          }
+            Value *pdir = builder.CreateGlobalStringPtr(directory);
+            Value *ppath = builder.CreateGlobalStringPtr(filepath);
 
-          if(!Inst.getMetadata("isRedZone")){
-            MDNode* N = MDNode::get(context, MDString::get(context, "false"));
-            Inst.setMetadata("isRedZone",N);
-          }
+
+            ConstantInt *size = builder.getInt64(TypeSize/8);
+            ConstantInt *iswrite = builder.getInt64(1);
+            ConstantInt *isread = builder.getInt64(0);
+
+            Value* addr=IsWrite?Inst.getOperand(1):Inst.getOperand(0);
+
+            if(IsWrite)
+                CallInst::Create(callee, {addr,size,iswrite,pdir,ppath}, "",&Inst);
+            else
+                CallInst::Create(callee, {addr,size,isread,pdir,ppath}, "",&Inst);
+              }
+
+              if(!Inst.getMetadata("isRedZone")){
+                MDNode* N = MDNode::get(context, MDString::get(context, "false"));
+                Inst.setMetadata("isRedZone",N);
+              }
 
 
       if (ReturnInst *RI = dyn_cast<ReturnInst>(&Inst)) {
