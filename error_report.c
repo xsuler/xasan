@@ -28,6 +28,7 @@ int main(int argc, char** argv){
         long long int fault=0;
         struct err_trace e;
 	e.id=0;
+	e.xasan_err_addr=0;
 	if(argc>1)
 		e.id=atoi(argv[1]);
         privcmd_hypercall_t my_hypercall={
@@ -45,15 +46,31 @@ int main(int argc, char** argv){
 	char io_type[10];
 	char trace[1024];
 	strcpy(io_type,"read");
-	strcpy(err_info,"global variable overflow");
 	if(e.is_write)
 		strcpy(io_type,"write");
-	if(e.xasan_err_type==120)
+	int flag=0;
+	if(e.xasan_err_type==120){
+		flag=1;
 		strcpy(err_info,"heap overflow");
-	if(e.xasan_err_type==121)
+	}
+	if(e.xasan_err_type==121){
+		flag=1;
 		strcpy(err_info,"use after free");
-	if(e.xasan_err_type==122)
+	}
+	if(e.xasan_err_type==122){
+		flag=1;
 		strcpy(err_info,"stack overflow");
+	}
+	if(e.xasan_err_type==123){
+		flag=1;
+		strcpy(err_info,"use after return");
+	}
+	if(e.xasan_err_type==0){
+		flag=1;
+		strcpy(err_info,"global variable overflow");
+	}
+	if(flag==0)
+		return 0;
 
 	int pos=0;
 	for(int i=e.xasan_trace_pos;i>=0;i--){
@@ -65,8 +82,8 @@ int main(int argc, char** argv){
 		pos+=1;
 	}
 	trace[pos]=0;
-
-	printf("====ERROR: XenSanitizer: %s on address %p\n%s of size %ld at %p\n%s\n",err_info,e.xasan_err_addr, io_type, e.xasan_err_size,e.xasan_err_addr,trace);
+	if(e.xasan_err_addr!=0)
+		printf("====ERROR: XenSanitizer: %s on address %p\n%s of size %ld at %p\n%s\n",err_info,e.xasan_err_addr, io_type, e.xasan_err_size,e.xasan_err_addr,trace);
 
         return 0;
 
