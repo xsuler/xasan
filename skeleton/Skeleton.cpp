@@ -196,7 +196,6 @@ namespace {
             IRBuilder<> IRB(RI);
 
            //insert func for redzone
-	   //
             ConstantInt *offset =IRB.getInt64(cur_pos);
             Value *rzv=IRB.CreateIntToPtr(
             IRB.CreateAdd(vec[0],offset),Type::getInt8PtrTy(context));
