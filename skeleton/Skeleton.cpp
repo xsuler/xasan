@@ -246,14 +246,12 @@ namespace {
             }
 
             // mark normal hp flag
-            for(int i=0;i<allocs_hp.size();i++){
-                Value* redZone = allocs_hp[i];
+            for(int i=0;i<allocs_n.size();i++){
+                Value* redZone = allocs_n[i];
                 FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context)}, false);
                 auto callee = BB.getModule()->getOrInsertFunction("mark_write_flag_r", type);
-                ConstantInt *size = builder.getInt64(sizes_hp[i]);
-
+                ConstantInt *size = builder.getInt64(sizes_n[i]);
                 CallInst::Create(callee, {redZone,size}, "",RI);
-   
             }
             
 
