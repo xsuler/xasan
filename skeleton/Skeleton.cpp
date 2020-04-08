@@ -300,6 +300,19 @@ namespace {
                 sizes_n.push_back(sz);
 
             }
+            //insert mark_write_flag_r for normal
+            {
+                ConstantInt *offset_nm =IRB.getInt64(cur_pos+16-sz%16);
+                Value *nmv=IRB.CreateIntToPtr(
+                   IRB.CreateAdd(vec[0],offset_nm),Type::getInt8PtrTy(context));
+                FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context)}, false);
+                auto callee = BB.getModule()->getOrInsertFunction("mark_write_flag_r", type);
+                ConstantInt *size = builder.getInt64(sz);
+
+                CallInst::Create(callee, {nmv,size}, "",Inst.getNextNonDebugInstruction());
+
+            }
+ 
             //insert mark_hp_flag for normal
             {
                 ConstantInt *offset_nm =IRB.getInt64(cur_pos+16-sz%16);
