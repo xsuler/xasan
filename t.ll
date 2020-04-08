@@ -3,11 +3,13 @@ source_filename = "t.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
+%struct.ff = type { [4 x i8] }
+
 @.str = private unnamed_addr constant [24 x i8] c"hp addr: %p, size: %ld\0A\00", align 1
 @.str.1 = private unnamed_addr constant [25 x i8] c"hpr addr: %p, size: %ld\0A\00", align 1
-@.str.2 = private unnamed_addr constant [25 x i8] c"report usage of addr %p\0A\00", align 1
-@__const.func.a = private unnamed_addr constant [4 x i8] c"o\0B\DE!", align 1
-@.str.3 = private unnamed_addr constant [14 x i8] c"a: %d, b: %d\0A\00", align 1
+@.str.2 = private unnamed_addr constant [32 x i8] c"write flag addr: %p, size: %ld\0A\00", align 1
+@.str.3 = private unnamed_addr constant [25 x i8] c"report usage of addr %p\0A\00", align 1
+@.str.4 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 
 ; Function Attrs: noinline nounwind optnone sspstrong uwtable
 define dso_local void @enter_func(i8*, i8*) #0 {
@@ -59,6 +61,18 @@ define dso_local void @mark_valid(i8*, i64) #0 {
 }
 
 ; Function Attrs: noinline nounwind optnone sspstrong uwtable
+define dso_local void @mark_write_flag(i8*, i64) #0 {
+  %3 = alloca i8*, align 8
+  %4 = alloca i64, align 8
+  store i8* %0, i8** %3, align 8
+  store i64 %1, i64* %4, align 8
+  %5 = load i8*, i8** %3, align 8
+  %6 = load i64, i64* %4, align 8
+  %7 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @.str.2, i64 0, i64 0), i8* %5, i64 %6)
+  ret void
+}
+
+; Function Attrs: noinline nounwind optnone sspstrong uwtable
 define dso_local void @mark_invalid(i8*, i64, i8 signext) #0 {
   %4 = alloca i8*, align 8
   %5 = alloca i64, align 8
@@ -78,24 +92,23 @@ define dso_local void @report_xasan(i64*, i64, i64) #0 {
   store i64 %1, i64* %5, align 8
   store i64 %2, i64* %6, align 8
   %7 = load i64*, i64** %4, align 8
-  %8 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @.str.2, i64 0, i64 0), i64* %7)
+  %8 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @.str.3, i64 0, i64 0), i64* %7)
   ret void
 }
 
 ; Function Attrs: noinline nounwind optnone sspstrong uwtable
 define dso_local void @func() #0 {
-  %1 = alloca [4 x i8], align 1
-  %2 = alloca [4 x i8], align 1
-  %3 = alloca [4 x i8], align 1
-  %4 = bitcast [4 x i8]* %1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %4, i8* align 1 getelementptr inbounds ([4 x i8], [4 x i8]* @__const.func.a, i32 0, i32 0), i64 4, i1 false)
-  %5 = getelementptr inbounds [4 x i8], [4 x i8]* %1, i64 0, i64 0
-  %6 = load i8, i8* %5, align 1
-  %7 = sext i8 %6 to i32
-  %8 = getelementptr inbounds [4 x i8], [4 x i8]* %2, i64 0, i64 0
-  %9 = load i8, i8* %8, align 1
-  %10 = sext i8 %9 to i32
-  %11 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.3, i64 0, i64 0), i32 %7, i32 %10)
+  %1 = alloca %struct.ff, align 1
+  %2 = alloca %struct.ff, align 1
+  %3 = getelementptr inbounds %struct.ff, %struct.ff* %1, i32 0, i32 0
+  %4 = getelementptr inbounds [4 x i8], [4 x i8]* %3, i64 0, i64 0
+  store i8 1, i8* %4, align 1
+  %5 = bitcast %struct.ff* %2 to i8*
+  %6 = bitcast %struct.ff* %1 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %5, i8* align 1 %6, i64 4, i1 false)
+  %7 = getelementptr inbounds %struct.ff, %struct.ff* %2, i32 0, i32 0
+  %8 = getelementptr inbounds [4 x i8], [4 x i8]* %7, i64 0, i64 0
+  %9 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.4, i64 0, i64 0), i8* %8)
   ret void
 }
 

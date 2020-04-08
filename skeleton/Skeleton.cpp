@@ -234,7 +234,7 @@ namespace {
                 CallInst::Create(callee, {redZone,size,et_rz}, "",RI);
    
             }
-            // mark normal invalid
+            // mark normal hp flag
             for(int i=0;i<allocs_hp.size();i++){
                 Value* redZone = allocs_hp[i];
                 FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context)}, false);
@@ -245,6 +245,17 @@ namespace {
    
             }
 
+            // mark normal hp flag
+            for(int i=0;i<allocs_hp.size();i++){
+                Value* redZone = allocs_hp[i];
+                FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context)}, false);
+                auto callee = BB.getModule()->getOrInsertFunction("mark_write_flag_r", type);
+                ConstantInt *size = builder.getInt64(sizes_hp[i]);
+
+                CallInst::Create(callee, {redZone,size}, "",RI);
+   
+            }
+            
 
             // insert leave func
             FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getVoidTy(context)}, false);

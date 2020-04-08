@@ -23,6 +23,9 @@ void mark_valid(char* addr, int64_t size){
 void mark_write_flag(char* addr, int64_t size){
  printf("write flag addr: %p, size: %ld\n",addr,size);
 }
+void mark_write_flag_r(char* addr, int64_t size){
+ printf("writer flag addr: %p, size: %ld\n",addr,size);
+}
 void mark_invalid(char* addr, int64_t size, char type){
 }
 
@@ -32,12 +35,15 @@ void report_xasan(int64_t* addr, int64_t size, int64_t type){
 }
 
 
+struct ff{
+    char x[5];
+};
 
 void func(){
-   char a[4]={111,11,222,33};
-   char b[4];
-   char c[4];
-   printf("a: %d, b: %d\n",a[0],b[0]);
+   struct ff r;
+   r.x[0]=1;
+   struct ff b=r;
+   printf("%s\n",b.x);
 }
 
 int main(){
