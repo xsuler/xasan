@@ -101,13 +101,15 @@ namespace {
 
 
     virtual bool runOnFunction(Function &F) {
-     if(F.getName()=="mem_to_shadow"||F.getName()=="report_action"||F.getName()=="report_xasan"||F.getName()=="willInject"||F.getName()=="mark_valid"||F.getName()=="mark_invalid"||F.getName()=="enter_func"||F.getName()=="leave_func"||F.getName()=="memcpy"||F.getName()=="printk"||F.getName()=="vprintk_common"||F.getName()=="_spin_lock_recursive"||F.getName()=="_spin_lock"||F.getName()=="_spin_lock_cb"||F.getName()=="vsnprintf"){
+     if(F.getName()=="mem_to_shadow"||F.getName()=="report_action"||F.getName()=="report_xasan"||F.getName()=="willInject"||F.getName()=="mark_hp_flag"||F.getName()=="mark_hp_flag_r"||F.getName()=="mark_valid"||F.getName()=="mark_invalid"||F.getName()=="enter_func"||F.getName()=="leave_func"||F.getName()=="memcpy"||F.getName()=="printk"||F.getName()=="vprintk_common"||F.getName()=="_spin_lock_recursive"||F.getName()=="_spin_lock"||F.getName()=="_spin_lock_cb"||F.getName()=="vsnprintf"){
 	  return false;
      }
      vector<Value*> allocs;
      vector<int64_t> sizes;
      vector<Value*> allocs_n;
      vector<int64_t> sizes_n;
+     vector<Value*> allocs_hp;
+     vector<int64_t> sizes_hp;
      int auid{0};
 
       LLVMContext &context = F.getParent()->getContext();
@@ -232,6 +234,17 @@ namespace {
                 CallInst::Create(callee, {redZone,size,et_rz}, "",RI);
    
             }
+            // mark normal invalid
+            for(int i=0;i<allocs_hp.size();i++){
+                Value* redZone = allocs_hp[i];
+                FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context)}, false);
+                auto callee = BB.getModule()->getOrInsertFunction("mark_hp_flag_r", type);
+                ConstantInt *size = builder.getInt64(sizes_hp[i]);
+
+                CallInst::Create(callee, {redZone,size}, "",RI);
+   
+            }
+
 
             // insert leave func
             FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getVoidTy(context)}, false);
@@ -270,7 +283,21 @@ namespace {
                 sizes_n.push_back(sz);
 
             }
+            //insert mark_hp_flag for normal
+            {
+                ConstantInt *offset_nm =IRB.getInt64(cur_pos+16-sz%16);
+                Value *nmv=IRB.CreateIntToPtr(
+                   IRB.CreateAdd(vec[0],offset_nm),Type::getInt8PtrTy(context));
+                FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context)}, false);
+                auto callee = BB.getModule()->getOrInsertFunction("mark_hp_flag", type);
+                ConstantInt *size = builder.getInt64(sz);
 
+                CallInst::Create(callee, {nmv,size}, "",Inst.getNextNonDebugInstruction());
+
+                allocs_hp.push_back(nmv);
+                sizes_hp.push_back(sz);
+
+            }
             //insert func for redzone
             {
                 ConstantInt *offset_rz =IRB.getInt64(cur_pos);
