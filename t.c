@@ -20,6 +20,9 @@ void mark_hp_flag_r(char* addr, int64_t size){
 }
 void mark_valid(char* addr, int64_t size){
 }
+void mark_write_flag(char* addr, int64_t size){
+ printf("write flag addr: %p, size: %ld\n",addr,size);
+}
 void mark_invalid(char* addr, int64_t size, char type){
 }
 

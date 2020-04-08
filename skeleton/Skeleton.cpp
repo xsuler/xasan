@@ -252,6 +252,14 @@ namespace {
             CallInst::Create(callee, {}, "",&Inst);
       }
 
+      if (auto CI = dyn_cast<MemCpyInst>(&Inst)) {
+          Value* destPtr = CI->getOperand(0);
+          Value* size= CI->getOperand(2);
+          FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context)}, false);
+          auto callee = BB.getModule()->getOrInsertFunction("mark_write_flag", type);
+          CallInst::Create(callee, {destPtr,size}, "",&Inst);
+
+      }
       if(isStaticAlloc(&Inst)){
         if(cast<MDString>(Inst.getMetadata("isRedZone")->getOperand(0))->getString()!="true"){
             IRBuilder<> builder(&BB);
