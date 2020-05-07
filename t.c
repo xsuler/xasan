@@ -40,10 +40,7 @@ struct ff{
 };
 
 void func(){
-   struct ff r;
-   r.x[0]=1;
-   struct ff b=r;
-   printf("%s\n",b.x);
+	return;
 }
 
 int main(){
