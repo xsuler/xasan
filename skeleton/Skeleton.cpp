@@ -101,12 +101,13 @@ namespace {
 
 
     virtual bool runOnFunction(Function &F) {
-     if(F.getName()=="add_cov"||F.getName()=="_xmalloc"||F.getName()=="xfree"||F.getName()=="mem_to_shadow"||F.getName()=="report_action"||F.getName()=="report_xasan"||F.getName()=="willInject"||F.getName()=="mark_write_flag"||F.getName()=="mark_write_flag_r"||F.getName()=="mark_hp_flag"||F.getName()=="mark_hp_flag_r"||F.getName()=="mark_valid"||F.getName()=="mark_invalid"||F.getName()=="enter_func"||F.getName()=="leave_func"||F.getName()=="memcpy"||F.getName()=="printk"||F.getName()=="vprintk_common"||F.getName()=="_spin_lock_recursive"||F.getName()=="_spin_lock"||F.getName()=="_spin_lock_cb"||F.getName()=="vsnprintf"){
+     if(F.getName()=="add_cov"||F.getName()=="_xmalloc"||F.getName()=="xfree"||F.getName()=="mem_to_shadow"||F.getName()=="mem_to_mem_shadow"||F.getName()=="mem_to_hp_flag_shadow"||F.getName()=="report_action"||F.getName()=="report_xasan"||F.getName()=="willInject"||F.getName()=="mark_write_flag"||F.getName()=="mark_write_flag_r"||F.getName()=="mark_hp_flag"||F.getName()=="mark_hp_flag_r"||F.getName()=="mark_valid"||F.getName()=="mark_invalid"||F.getName()=="enter_func"||F.getName()=="leave_func"||F.getName()=="memcpy"||F.getName()=="printk"||F.getName()=="vprintk_common"||F.getName()=="_spin_lock_recursive"||F.getName()=="_spin_lock"||F.getName()=="_spin_lock_cb"||F.getName()=="vsnprintf"){
 	  return false;
      }
      vector<Value*> allocs;
      vector<int64_t> sizes;
      vector<Value*> allocs_n;
+     vector<Instruction*> allocs_static;
      vector<int64_t> sizes_n;
      vector<Value*> allocs_hp;
      vector<int64_t> sizes_hp;
@@ -134,7 +135,6 @@ namespace {
             long sz=dyn_cast<AllocaInst>(&Inst)->getAllocationSizeInBits(lt).getValue()/8;
             vec_size+=sz+16-sz%16;
            }
-     
         }
       }
       for (auto &BB : F) {
@@ -143,14 +143,16 @@ namespace {
 	  //insert enter_func
           if(flag==0){
             flag=1;
-            IRBuilder<> builder(&BB);
-            FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context), Type::getInt8PtrTy(context)}, false);
-            auto callee = BB.getModule()->getOrInsertFunction("enter_func", type);
 
-            GlobalVariable* name= builder.CreateGlobalString(F.getName());
-            GlobalVariable* file= builder.CreateGlobalString(F.getParent()->getSourceFileName());
+	    //modifyed by split
+            //IRBuilder<> builder(&BB);
+            //FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context), Type::getInt8PtrTy(context)}, false);
+            //auto callee = BB.getModule()->getOrInsertFunction("enter_func", type);
 
-            CallInst::Create(callee, {name,file}, "",&Inst);
+            //GlobalVariable* name= builder.CreateGlobalString(F.getName());
+            //GlobalVariable* file= builder.CreateGlobalString(F.getParent()->getSourceFileName());
+
+            //CallInst::Create(callee, {name,file}, "",&Inst);
 
 
             if(vec.size()==0){
@@ -164,32 +166,34 @@ namespace {
                 arr_alloc->setMetadata("isRedZone",N);
             } 
           }
+
           bool IsWrite;
           uint64_t TypeSize;
           unsigned Alignment;
           if(isInterestingMemoryAccess(&Inst,&IsWrite,&TypeSize,&Alignment)){
-            IRBuilder<> builder(&BB);
+// modifyed by split
+//            IRBuilder<> builder(&BB);
 
-            FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt64Ty(context)}, false);
-            auto callee = BB.getModule()->getOrInsertFunction("report_xasan", type);
+//            FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt64Ty(context)}, false);
+//            auto callee = BB.getModule()->getOrInsertFunction("report_xasan", type);
+//
+//
+//            ConstantInt *size = builder.getInt64(TypeSize/8);
+//            ConstantInt *iswrite = builder.getInt64(1);
+//            ConstantInt *isread = builder.getInt64(0);
+//
+//            Value* addr=IsWrite?Inst.getOperand(1):Inst.getOperand(0);
+//
+//            if(IsWrite)
+//                CallInst::Create(callee, {addr,size,iswrite}, "",&Inst);
+//            else
+//                CallInst::Create(callee, {addr,size,isread}, "",&Inst);
+      }
 
-
-            ConstantInt *size = builder.getInt64(TypeSize/8);
-            ConstantInt *iswrite = builder.getInt64(1);
-            ConstantInt *isread = builder.getInt64(0);
-
-            Value* addr=IsWrite?Inst.getOperand(1):Inst.getOperand(0);
-
-            if(IsWrite)
-                CallInst::Create(callee, {addr,size,iswrite}, "",&Inst);
-            else
-                CallInst::Create(callee, {addr,size,isread}, "",&Inst);
-              }
-
-              if(!Inst.getMetadata("isRedZone")){
-                MDNode* N = MDNode::get(context, MDString::get(context, "false"));
-                Inst.setMetadata("isRedZone",N);
-              }
+      if(!Inst.getMetadata("isRedZone")){
+	MDNode* N = MDNode::get(context, MDString::get(context, "false"));
+	Inst.setMetadata("isRedZone",N);
+      }
 
 
       if (ReturnInst *RI = dyn_cast<ReturnInst>(&Inst)) {
@@ -223,17 +227,17 @@ namespace {
                 CallInst::Create(callee, {redZone,size}, "",RI);
    
             }
-	    // mark normal invalid
-            for(int i=0;i<allocs_n.size();i++){
-                Value* redZone = allocs_n[i];
-                FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt64Ty(context)}, false);
-                auto callee = BB.getModule()->getOrInsertFunction("mark_invalid", type);
-                ConstantInt *size = builder.getInt64(sizes_n[i]);
-                ConstantInt *et_rz= builder.getInt8(123);
+	    //// mark normal invalid
+            //for(int i=0;i<allocs_n.size();i++){
+            //    Value* redZone = allocs_n[i];
+            //    FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getInt8PtrTy(context),Type::getInt64Ty(context),Type::getInt64Ty(context)}, false);
+            //    auto callee = BB.getModule()->getOrInsertFunction("mark_invalid", type);
+            //    ConstantInt *size = builder.getInt64(sizes_n[i]);
+            //    ConstantInt *et_rz= builder.getInt8(123);
 
-                CallInst::Create(callee, {redZone,size,et_rz}, "",RI);
+            //    CallInst::Create(callee, {redZone,size,et_rz}, "",RI);
    
-            }
+            //}
             // mark normal hp flag
             for(int i=0;i<allocs_hp.size();i++){
                 Value* redZone = allocs_hp[i];
@@ -255,10 +259,11 @@ namespace {
             }
             
 
+	    //modified by split
             // insert leave func
-            FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getVoidTy(context)}, false);
-            auto callee = BB.getModule()->getOrInsertFunction("leave_func", type);
-            CallInst::Create(callee, {}, "",&Inst);
+            //FunctionType *type = FunctionType::get(Type::getVoidTy(context), {Type::getVoidTy(context)}, false);
+            //auto callee = BB.getModule()->getOrInsertFunction("leave_func", type);
+            //CallInst::Create(callee, {}, "",&Inst);
       }
 
       if (auto CI = dyn_cast<MemCpyInst>(&Inst)) {
@@ -275,14 +280,13 @@ namespace {
             AllocaInst *AI=dyn_cast<AllocaInst>(&Inst);
             long sz=AI->getAllocationSizeInBits(lt).getValue()/8;
 
-            
-
             IRBuilder<> IRB(&Inst);
             ConstantInt *offset =IRB.getInt64(cur_pos+16-sz%16);
             
             auto *newv=IRB.CreateIntToPtr(
                IRB.CreateAdd(vec[0],offset),AI->getType());
 
+	    allocs_static.push_back(AI);
             AI->replaceAllUsesWith(newv);
 
             //insert func for normal
@@ -343,24 +347,17 @@ namespace {
                 allocs.push_back(rzv);
                 sizes.push_back(16-(sz%16));
             }
-
             cur_pos+=sz+16-sz%16;
           }
           else{
             errs()<<"meet one redzone\n";
           }
+
         }
     }
   }
-    for (auto &BB : F) {
-        for (auto &Inst : BB) {
-           if(isStaticAlloc(&Inst)){
-            if(cast<MDString>(Inst.getMetadata("isRedZone")->getOperand(0))->getString()!="true"){
-                Inst.eraseFromParent();
-            }
-           }
-        }
-      }
+      for(Instruction* Inst: allocs_static)
+	Inst->eraseFromParent();
  
       return false;
 

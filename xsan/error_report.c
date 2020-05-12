@@ -49,15 +49,6 @@ int main(int argc, char** argv){
 	if(e.is_write)
 		strcpy(io_type,"write");
 	int flag=0;
-	if(e.xasan_err_type==118){
-		flag=1;
-		strcpy(err_info,"global variable overflow");
-	}
-	if(e.xasan_err_type==119){
-		flag=1;
-		strcpy(err_info,"double free");
-	}
-
 	if(e.xasan_err_type==120){
 		flag=1;
 		strcpy(err_info,"heap overflow");
@@ -74,11 +65,10 @@ int main(int argc, char** argv){
 		flag=1;
 		strcpy(err_info,"use after return");
 	}
-	if(e.xasan_err_type==124){
+	if(e.xasan_err_type==0){
 		flag=1;
-		strcpy(err_info,"uninitialized memory read");
+		strcpy(err_info,"global variable overflow");
 	}
-
 	if(flag==0)
 		return 0;
 
