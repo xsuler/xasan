@@ -104,6 +104,8 @@ namespace {
      if(F.getName()=="add_cov"||F.getName()=="_xmalloc"||F.getName()=="xfree"||F.getName()=="mem_to_shadow"||F.getName()=="mem_to_mem_shadow"||F.getName()=="mem_to_hp_flag_shadow"||F.getName()=="report_action"||F.getName()=="report_xasan"||F.getName()=="willInject"||F.getName()=="mark_write_flag"||F.getName()=="mark_write_flag_r"||F.getName()=="mark_hp_flag"||F.getName()=="mark_hp_flag_r"||F.getName()=="mark_valid"||F.getName()=="mark_invalid"||F.getName()=="enter_func"||F.getName()=="leave_func"||F.getName()=="memcpy"||F.getName()=="printk"||F.getName()=="vprintk_common"||F.getName()=="_spin_lock_recursive"||F.getName()=="_spin_lock"||F.getName()=="_spin_lock_cb"||F.getName()=="vsnprintf"){
 	  return false;
      }
+     if(F.getName().startswith("ehc"))
+	     return false;
      vector<Value*> allocs;
      vector<int64_t> sizes;
      vector<Value*> allocs_n;
